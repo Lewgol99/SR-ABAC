@@ -8,10 +8,21 @@ from seedemu.core import Emulator
 from seedemu.compiler import Docker
 
 NUM_NODES    = 3
+# The repo is cloned into a folder called CryptObj so every later path stays the same.
+REPO_URL     = 'https://github.com/Lewgol99/SR-ABAC.git'
 #GIT_USERNAME = 'Lewgol99'
 #GIT_TOKEN    = ''
 #GIT_REPO     = ''
 
+# Overwrite pysyncobj's transport/encryptor with the CryptObj versions. The install
+# folder depends on the base image's Python version, so look it up (without importing
+# pysyncobj, which would load the modified transport) instead of hard-coding python3.8.
+COPY_PYSYNCOBJ = (
+    'D=$(python3 -c "import importlib.util as u; '
+    "print(list(u.find_spec('pysyncobj').submodule_search_locations)[0])\") "
+    '&& cp CryptObj/transport.py $D/transport.py '
+    '&& cp CryptObj/encryptor.py $D/encryptor.py'
+)
 ###############################################################################
 emu     = Emulator()
 base    = Base()
@@ -57,14 +68,14 @@ ca_host = (as166
            .joinNetwork('net0', address='10.166.0.253'))
 ca_host.addSoftware('git')
 ca_host.addSoftware('python3')
-ca_host.addBuildCommand('git clone https://github.com/Lewgol99/SR-ABAC.git CryptObj')
+ca_host.addBuildCommand(f'git clone {REPO_URL} CryptObj')
 ca_host.addBuildCommand('find CryptObj -mindepth 2 -type f -exec mv -n {} CryptObj/ \\; || true')
-ca_host.addBuildCommand('chmod -R 777 SR-ABAC')
+ca_host.addBuildCommand('chmod -R 777 CryptObj')
 ca_host.addBuildCommand(build_cmd)
 ca_host.addBuildCommand('apt-get install -y --no-install-recommends lftp python3-pip && apt-get clean && rm -rf /var/lib/apt/lists/*')
-ca_host.addBuildCommand('pip3 install --no-cache-dir -r CryptObj/requirements.txt')
-ca_host.addBuildCommand('cp CryptObj/transport.py /usr/local/lib/python3.8/dist-packages/pysyncobj/transport.py')
-ca_host.addBuildCommand('cp CryptObj/encryptor.py /usr/local/lib/python3.8/dist-packages/pysyncobj/encryptor.py')
+ca_host.addBuildCommand('pip3 install --no-cache-dir --break-system-packages -r CryptObj/requirements.txt')
+ca_host.addBuildCommand('pip3 check || true')
+ca_host.addBuildCommand(COPY_PYSYNCOBJ)
 ca_host.appendStartCommand('until ip route | grep -q "10.166.0.0"; do sleep 1; done')
 ca_host.appendStartCommand('cd /CryptObj && gunicorn --preload --workers 32 --timeout 120 --bind 0.0.0.0:5000 ca_server:app')
 ###############################################################################
@@ -74,14 +85,14 @@ for i in range(1, NUM_NODES + 1):
     host = as166.createHost(name).joinNetwork('net0')
     host.addSoftware('git')
     host.addSoftware('python3')
-    host.addBuildCommand('git clone https://github.com/Lewgol99/SR-ABAC.git CryptObj')
+    host.addBuildCommand(f'git clone {REPO_URL} CryptObj')
     host.addBuildCommand('find CryptObj -mindepth 2 -type f -exec mv -n {} CryptObj/ \\; || true')
-    host.addBuildCommand('chmod -R 777 SR-ABAC')
+    host.addBuildCommand('chmod -R 777 CryptObj')
     host.addBuildCommand(build_cmd)
     host.addBuildCommand('apt-get install -y --no-install-recommends lftp python3-pip && apt-get clean && rm -rf /var/lib/apt/lists/*')
-    host.addBuildCommand('pip3 install --no-cache-dir -r CryptObj/requirements.txt')
-    host.addBuildCommand('cp CryptObj/transport.py /usr/local/lib/python3.8/dist-packages/pysyncobj/transport.py')
-    host.addBuildCommand('cp CryptObj/encryptor.py /usr/local/lib/python3.8/dist-packages/pysyncobj/encryptor.py')
+    host.addBuildCommand('pip3 install --no-cache-dir --break-system-packages -r CryptObj/requirements.txt')
+    host.addBuildCommand('pip3 check || true')
+    host.addBuildCommand(COPY_PYSYNCOBJ)
     host.appendStartCommand('until ip route | grep -q "10.166.0.0"; do sleep 1; done')
     host.appendStartCommand(f'cd /CryptObj && python3 /CryptObj/cryptobj.py node{i} RSA 2048 AES')
 ###############################################################################
