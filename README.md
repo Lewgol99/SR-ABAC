@@ -1,6 +1,6 @@
-## Crypt-ABAC
+## SR-ABAC
 
-The objectives of the Crypt-ABAC system are is implement ?? using py-abac and deployed within SEED Internet Emulator to ?? deployed in distributed systems. This validates NIST security properties such as ?? for information security and can be used as a secure engineering design for security applications. The dependencies for the protocol can be viewed and installed in the requirements.txt. 
+The objectives of the SR-ABAC system are is implement ?? using py-abac and deployed within SEED Internet Emulator to ?? deployed in distributed systems. This validates NIST security properties such as ?? for information security and can be used as a secure engineering design for security applications. The dependencies for the protocol can be viewed and installed in the requirements.txt. 
 
 
 ## Original Projects
